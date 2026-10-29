@@ -10,7 +10,10 @@ import {
   TrendingDown, 
   Flame, 
   BarChart2, 
-  ShieldAlert
+  ShieldAlert,
+  Lock,
+  ShieldCheck,
+  Rocket
 } from 'lucide-react';
 
 interface TokenCardProps {
@@ -38,12 +41,27 @@ export const TokenCard: React.FC<TokenCardProps> = ({ token, lang, onSelectToken
     return `$${p.toFixed(2)}`;
   };
 
-  const formatNumber = (num: number) => {
-    if (!num) return '$0';
+  const formatNumber = (num: number | undefined | null) => {
+    if (num === undefined || num === null || isNaN(num) || num === 0) return '$0';
     if (num >= 1_000_000_000) return `$${(num / 1_000_000_000).toFixed(2)}B`;
     if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
     if (num >= 1_000) return `$${(num / 1_000).toFixed(1)}K`;
-    return `$${Math.round(num).toLocaleString()}`;
+    if (num >= 1) return `$${num.toFixed(1)}`;
+    return `$${num.toFixed(2)}`;
+  };
+
+  const formatAge = (days: number | undefined | null) => {
+    if (days === undefined || days === null) return 'N/A';
+    if (days <= 0) return lang === 'vi' ? 'Vừa tạo' : 'Just now';
+    if (days < 1) {
+      const hours = Math.round(days * 24);
+      return hours <= 0 ? '1h' : `${hours}h`;
+    }
+    if (days >= 30) {
+      const months = (days / 30).toFixed(1);
+      return `${months}mo (${Math.round(days)}d)`;
+    }
+    return `${days.toFixed(1)}d`;
   };
 
   const isPositive = (token.priceChange24h || 0) >= 0;
@@ -134,10 +152,10 @@ export const TokenCard: React.FC<TokenCardProps> = ({ token, lang, onSelectToken
         </div>
 
         {/* Strategy Bar: Age, ATH, ATL */}
-        <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 mb-2.5 flex items-center justify-between text-[11px]">
+        <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 mb-2 flex items-center justify-between text-[11px]">
           <div className="flex items-center space-x-1 text-slate-300">
             <span className="text-slate-500 text-[10px] uppercase font-semibold">Tuổi:</span>
-            <span className="font-bold text-purple-300">{token.ageDays || 5}d</span>
+            <span className="font-bold text-purple-300 font-mono">{formatAge(token.ageDays)}</span>
           </div>
           <div className="flex items-center space-x-1">
             <span className="text-slate-500 text-[10px] uppercase font-semibold">ATH:</span>
@@ -149,15 +167,56 @@ export const TokenCard: React.FC<TokenCardProps> = ({ token, lang, onSelectToken
           </div>
         </div>
 
-        {/* Celebrity / KOL Badge if applicable */}
+        {/* Launchpad Origin & LP Security Badges */}
+        <div className="mb-2.5 flex items-center justify-between text-[11px] gap-1.5 flex-wrap">
+          <span className="px-2 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-semibold flex items-center gap-1 text-[10px]">
+            <Rocket className="w-2.5 h-2.5 text-indigo-400" />
+            <span>{token.launchSource || (token.isPumpFun ? 'Pump.fun' : 'Raydium')}</span>
+          </span>
+
+          <div className="flex items-center gap-1 flex-wrap">
+            {token.isLpLocked ? (
+              <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold flex items-center gap-0.5" title={`Thanh khoản đã khóa ${token.lpLockedPercent || 100}% vĩnh viễn (${token.lpLockType === 'burned' ? 'Đốt LP' : 'Khóa'})`}>
+                <Lock className="w-2.5 h-2.5 text-emerald-400" />
+                <span>LP {token.lpLockedPercent || 100}% {token.lpLockType === 'burned' ? 'Burn' : 'Khóa'}</span>
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-300 text-[10px] font-bold flex items-center gap-0.5" title="Thanh khoản LP chưa khóa! Dev nắm giữ LP có thể rút">
+                <ShieldAlert className="w-2.5 h-2.5 text-rose-400" />
+                <span>Chưa Khóa LP</span>
+              </span>
+            )}
+            {token.isLpPullProof ? (
+              <span className="px-1.5 py-0.5 rounded-md bg-teal-500/15 border border-teal-500/30 text-teal-300 text-[10px] font-bold flex items-center gap-0.5" title="Hoàn toàn không thể rút thanh khoản (Unruggable, LP Burned & Mint Revoked)">
+                <ShieldCheck className="w-2.5 h-2.5 text-teal-400" />
+                <span>Chống Rút LP</span>
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-bold flex items-center gap-0.5" title="Có rủi ro rút thanh khoản hoặc mint thêm token">
+                <ShieldAlert className="w-2.5 h-2.5 text-amber-400" />
+                <span>Nguy Cơ Rút LP</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Tiêu chí độc lập: Celebrity / KOL Badge */}
         {token.isCelebrityMeta && (
-          <div className="mb-2.5 flex items-center justify-between px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 font-semibold">
-            <span className="flex items-center gap-1">
-              <span>👑</span>
-              <span className="truncate">KOL X: {token.celebrityName || token.xHandle}</span>
+          <div className={`mb-2.5 flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold ${
+            token.celebrityRole === 'created_by'
+              ? 'bg-amber-400/15 border-amber-400/40 text-amber-200'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+          }`}>
+            <span className="flex items-center gap-1.5 truncate">
+              <span className="text-sm">👑</span>
+              <span className="truncate">{token.celebrityName || token.xHandle}</span>
             </span>
-            <span className="text-[10px] uppercase text-amber-400/80 font-mono">
-              {token.celebrityRole === 'created_by' ? 'Do KOL tạo' : 'KOL lan truyền'}
+            <span className={`text-[9px] uppercase px-1.5 py-0.2 rounded font-black tracking-wider flex-shrink-0 ${
+              token.celebrityRole === 'created_by' 
+                ? 'bg-amber-400 text-slate-950 shadow-sm' 
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+            }`}>
+              {token.celebrityRole === 'created_by' ? 'Do KOL Tạo' : 'KOL Shill / Narrative X'}
             </span>
           </div>
         )}

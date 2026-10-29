@@ -13,7 +13,10 @@ import {
   BarChart2, 
   AlertTriangle,
   Flame,
-  Share2
+  Share2,
+  Lock,
+  Rocket,
+  CheckCircle2
 } from 'lucide-react';
 
 interface TokenModalProps {
@@ -77,6 +80,29 @@ export const TokenModal: React.FC<TokenModalProps> = ({ token, onClose, lang }) 
   const rugCheckUrl = `https://rugcheck.xyz/tokens/${token.address}`;
   const solscanUrl = `https://solscan.io/token/${token.address}`;
 
+  const formatNumber = (num: number | undefined | null) => {
+    if (num === undefined || num === null || isNaN(num) || num === 0) return '$0';
+    if (num >= 1_000_000_000) return `$${(num / 1_000_000_000).toFixed(2)}B`;
+    if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
+    if (num >= 1_000) return `$${(num / 1_000).toFixed(1)}K`;
+    if (num >= 1) return `$${num.toFixed(1)}`;
+    return `$${num.toFixed(2)}`;
+  };
+
+  const formatAge = (days: number | undefined | null) => {
+    if (days === undefined || days === null) return 'N/A';
+    if (days <= 0) return lang === 'vi' ? 'Vừa tạo' : 'Just now';
+    if (days < 1) {
+      const hours = Math.round(days * 24);
+      return hours <= 0 ? '1h' : `${hours} ${lang === 'vi' ? 'giờ' : 'hours'}`;
+    }
+    if (days >= 30) {
+      const months = (days / 30).toFixed(1);
+      return `${months} ${lang === 'vi' ? 'tháng' : 'mo'} (${Math.round(days)} ${lang === 'vi' ? 'ngày' : 'd'})`;
+    }
+    return `${days.toFixed(1)} ${lang === 'vi' ? 'ngày' : 'days'}`;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
       <div 
@@ -136,15 +162,15 @@ export const TokenModal: React.FC<TokenModalProps> = ({ token, onClose, lang }) 
             </div>
             <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">{lang === 'vi' ? 'Volume 24h' : '24h Volume'}</span>
-              <span className="text-sm font-bold text-slate-200">${Math.round(token.volume24h || 0).toLocaleString()}</span>
+              <span className="text-sm font-bold text-slate-200">{formatNumber(token.volume24h)}</span>
             </div>
             <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">{lang === 'vi' ? 'Vốn hóa (MC)' : 'Market Cap'}</span>
-              <span className="text-sm font-bold text-slate-200">${Math.round(token.marketCapUsd || 0).toLocaleString()}</span>
+              <span className="text-sm font-bold text-slate-200">{formatNumber(token.marketCapUsd)}</span>
             </div>
             <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 col-span-2 sm:col-span-1">
               <span className="text-[10px] text-teal-400 uppercase font-semibold block">{lang === 'vi' ? 'Thanh khoản' : 'Liquidity'}</span>
-              <span className="text-sm font-bold text-teal-300 font-mono">${Math.round(token.liquidityUsd || 0).toLocaleString()}</span>
+              <span className="text-sm font-bold text-teal-300 font-mono">{formatNumber(token.liquidityUsd)}</span>
             </div>
           </div>
 
@@ -172,7 +198,7 @@ export const TokenModal: React.FC<TokenModalProps> = ({ token, onClose, lang }) 
           <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div>
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">{lang === 'vi' ? 'Tuổi Token' : 'Token Age'}</span>
-              <span className="text-sm font-bold text-purple-300 font-mono">{token.ageDays || 5} ngày</span>
+              <span className="text-sm font-bold text-purple-300 font-mono">{formatAge(token.ageDays)}</span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 uppercase font-semibold block">{lang === 'vi' ? 'Đỉnh (ATH)' : 'ATH Market Cap'}</span>
@@ -277,7 +303,106 @@ export const TokenModal: React.FC<TokenModalProps> = ({ token, onClose, lang }) 
           {/* Tab 2: Security & RugCheck */}
           {activeTab === 'security' && (
             <div className="space-y-3">
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start space-x-2.5">
+              {/* Security Score Banner */}
+              <div className={`p-3.5 rounded-2xl border flex items-center justify-between ${
+                (token.securityScore || (token.isLpPullProof ? 95 : 30)) >= 80
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  : (token.securityScore || 30) >= 60
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+              }`}>
+                <div className="flex items-center space-x-2.5">
+                  <ShieldCheck className={`w-5 h-5 ${
+                    (token.securityScore || (token.isLpPullProof ? 95 : 30)) >= 80 ? 'text-emerald-400' : 'text-rose-400'
+                  }`} />
+                  <div>
+                    <span className="text-xs font-bold block">
+                      {lang === 'vi' ? 'Điểm An Toàn On-Chain' : 'On-Chain Security Score'}: {token.securityScore || (token.isLpPullProof ? 98 : 30)}/100
+                    </span>
+                    <span className="text-[11px] opacity-80">
+                      {token.isLpPullProof && token.isLpLocked
+                        ? (lang === 'vi' ? 'Đạt chuẩn Unruggable: LP đốt vĩnh viễn & Hủy Mint' : 'Unruggable: 100% LP Burned & Mint Revoked')
+                        : (lang === 'vi' ? 'Cảnh báo rủi ro: LP chưa khóa hoặc quyền Mint còn hoạt động' : 'Risk warning: Unlocked LP or active mint authority')}
+                    </span>
+                  </div>
+                </div>
+                <span className={`px-2 py-1 rounded-lg text-xs font-black uppercase ${
+                  (token.securityScore || (token.isLpPullProof ? 95 : 30)) >= 80
+                    ? 'bg-emerald-400 text-slate-950'
+                    : 'bg-rose-500 text-white'
+                }`}>
+                  {token.isLpPullProof ? 'AN TOÀN' : 'CẢNH BÁO'}
+                </span>
+              </div>
+
+              {/* Security & LP Verification Matrix */}
+              <div className="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>{lang === 'vi' ? 'Kiểm tra Nguồn phát hành & An toàn Thanh khoản (Anti-Rug)' : 'Launchpad & Liquidity Audit'}</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1.5">
+                      <Rocket className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>{lang === 'vi' ? 'Nguồn phát hành' : 'Launchpad'}</span>
+                    </span>
+                    <span className="font-bold text-indigo-300">
+                      {token.launchSource || (token.isPumpFun ? 'Pump.fun' : 'Raydium')}
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>{lang === 'vi' ? 'Khóa thanh khoản' : 'Liquidity Lock'}</span>
+                    </span>
+                    <span className={`font-bold flex items-center gap-1 ${token.isLpLocked ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {token.isLpLocked ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <ShieldAlert className="w-3 h-3 text-rose-400" />}
+                      <span>{token.isLpLocked ? `${token.lpLockedPercent || 100}% (${token.lpLockType === 'burned' ? 'Đốt LP' : 'Đã khóa'})` : 'Chưa Khóa LP (0%)'}</span>
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
+                      <span>{lang === 'vi' ? 'Rút thanh khoản' : 'Liquidity Pull'}</span>
+                    </span>
+                    <span className={`font-bold flex items-center gap-1 ${token.isLpPullProof ? 'text-teal-300' : 'text-amber-400'}`}>
+                      {token.isLpPullProof ? <CheckCircle2 className="w-3 h-3 text-teal-400" /> : <ShieldAlert className="w-3 h-3 text-amber-400" />}
+                      <span>{token.isLpPullProof ? 'KHÔNG THỂ RÚT (Unruggable)' : 'Có nguy cơ rút LP'}</span>
+                    </span>
+                  </div>
+
+                  <div className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />
+                      <span>{lang === 'vi' ? 'Quyền Mint / Freeze' : 'Mint & Freeze'}</span>
+                    </span>
+                    <span className={`font-bold ${token.mintAuthorityRevoked ? 'text-purple-300' : 'text-rose-400'}`}>
+                      {token.mintAuthorityRevoked ? 'Đã Hủy (Revoked)' : 'Chưa Hủy (Nguy cơ Mint)'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Specific Risk Warnings if any */}
+                {token.securityWarnings && token.securityWarnings.length > 0 && (
+                  <div className="mt-2 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs space-y-1">
+                    <span className="font-bold flex items-center gap-1 text-[11px] uppercase tracking-wider text-rose-400">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      {lang === 'vi' ? 'Cảnh báo rủi ro phát hiện' : 'Identified Risk Warnings'}
+                    </span>
+                    <ul className="list-disc list-inside space-y-0.5 text-[11px] opacity-90 pl-1">
+                      {token.securityWarnings.map((w, idx) => (
+                        <li key={idx}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start space-x-2.5">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" />
                 <p>
                   {lang === 'vi' 
@@ -376,6 +501,26 @@ export const TokenModal: React.FC<TokenModalProps> = ({ token, onClose, lang }) 
             >
               <BarChart2 className="w-3.5 h-3.5 text-emerald-400" />
               <span>DEX Screener</span>
+            </a>
+
+            <a
+              href={`https://solscan.io/token/${token.address}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 text-xs font-medium flex items-center space-x-1.5 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-purple-400" />
+              <span>Solscan CA</span>
+            </a>
+
+            <a
+              href={`https://birdeye.so/token/${token.address}?chain=solana`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs font-medium flex items-center space-x-1.5 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+              <span>Birdeye</span>
             </a>
 
             {token.pumpFunUrl && (

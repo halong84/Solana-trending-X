@@ -28,10 +28,22 @@ export interface Token {
   pairCreatedAt?: number;
   athMarketCapUsd: number;
   atlMarketCapUsd: number;
+  // Tiêu chí độc lập: KOL & Người nổi tiếng trên X
   isCelebrityMeta?: boolean;
   celebrityName?: string;
   celebrityXHandle?: string;
   celebrityRole?: 'created_by' | 'inspired_by' | 'endorsed_by';
+  // Nguồn phát hành
+  launchSource?: 'Pump.fun' | 'Moonshot' | 'Raydium' | 'Meteora' | 'Standard DEX';
+  // Tinh chỉnh an toàn thanh khoản & Chống rút LP (Anti-Rugpull)
+  isLpLocked?: boolean;
+  lpLockedPercent?: number; // 0 - 100
+  lpLockType?: 'burned' | 'locked' | 'bonding_curve' | 'unlocked';
+  isLpPullProof?: boolean; // Không thể rút thanh khoản: LP 100% burn/lock + Mint Revoked
+  mintAuthorityRevoked?: boolean;
+  freezeAuthorityRevoked?: boolean;
+  securityScore?: number; // 0 - 100
+  securityWarnings?: string[];
 }
 
 export interface AIScanResult {
@@ -41,4 +53,9 @@ export interface AIScanResult {
   sources?: { title: string; url: string }[];
 }
 
-export type FilterCategory = 'all' | 'celebrity-kol' | 'hot-x' | 'gainers' | 'pumpfun' | 'ai-agents' | 'culture-animals';
+export type FilterCategory = 'all' | 'hot-x' | 'gainers' | 'pumpfun' | 'ai-agents' | 'culture-animals';
+export type LaunchSourceFilter = 'all' | 'pumpfun' | 'moonshot' | 'raydium' | 'meteora';
+export type CelebrityFilter = 'all' | 'any_celeb' | 'created_by' | 'endorsed_or_inspired';
+export type LpLockFilter = 'all' | 'locked_only' | 'unlocked_risky';
+export type UnruggableFilter = 'all' | 'unruggable_only' | 'pull_risk';
+
