@@ -1,0 +1,8 @@
+{
+  "name": "Solana X Trend Radar - 24h Memecoin Tracker",
+  "description": "Radar tìm kiếm và phân tích các memecoin Solana đang trending trên X (Twitter) trong vòng 24h qua với dữ liệu on-chain thời gian thực và AI phân tích xu hướng.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
