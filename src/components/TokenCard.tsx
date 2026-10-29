@@ -118,7 +118,7 @@ export const TokenCard: React.FC<TokenCardProps> = ({ token, lang, onSelectToken
         </div>
 
         {/* Volume, Market Cap & Liquidity Grid */}
-        <div className="grid grid-cols-3 gap-1.5 text-xs mb-3">
+        <div className="grid grid-cols-3 gap-1.5 text-xs mb-2">
           <div className="bg-slate-950/40 p-2 rounded-lg border border-slate-800/40 truncate">
             <span className="text-[10px] text-slate-400 block truncate">{lang === 'vi' ? 'Vol 24h' : '24h Vol'}</span>
             <span className="font-semibold text-slate-200 truncate block">{formatNumber(token.volume24h)}</span>
@@ -132,6 +132,35 @@ export const TokenCard: React.FC<TokenCardProps> = ({ token, lang, onSelectToken
             <span className="font-semibold text-teal-300 truncate block">{formatNumber(token.liquidityUsd)}</span>
           </div>
         </div>
+
+        {/* Strategy Bar: Age, ATH, ATL */}
+        <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800/80 mb-2.5 flex items-center justify-between text-[11px]">
+          <div className="flex items-center space-x-1 text-slate-300">
+            <span className="text-slate-500 text-[10px] uppercase font-semibold">Tuổi:</span>
+            <span className="font-bold text-purple-300">{token.ageDays || 5}d</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span className="text-slate-500 text-[10px] uppercase font-semibold">ATH:</span>
+            <span className="font-bold text-emerald-400">{formatNumber(token.athMarketCapUsd || token.marketCapUsd * 2.2)}</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span className="text-slate-500 text-[10px] uppercase font-semibold">ATL:</span>
+            <span className="font-bold text-rose-400">{formatNumber(token.atlMarketCapUsd || token.marketCapUsd * 0.2)}</span>
+          </div>
+        </div>
+
+        {/* Celebrity / KOL Badge if applicable */}
+        {token.isCelebrityMeta && (
+          <div className="mb-2.5 flex items-center justify-between px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 font-semibold">
+            <span className="flex items-center gap-1">
+              <span>👑</span>
+              <span className="truncate">KOL X: {token.celebrityName || token.xHandle}</span>
+            </span>
+            <span className="text-[10px] uppercase text-amber-400/80 font-mono">
+              {token.celebrityRole === 'created_by' ? 'Do KOL tạo' : 'KOL lan truyền'}
+            </span>
+          </div>
+        )}
 
         {/* Description snippet */}
         {token.description && (

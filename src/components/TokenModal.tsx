@@ -148,7 +148,47 @@ export const TokenModal: React.FC<TokenModalProps> = ({ token, onClose, lang }) 
             </div>
           </div>
 
-          {/* Full Contract Address */}
+          {/* Celebrity & Strategy Banner if applicable */}
+          {token.isCelebrityMeta && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 flex items-start space-x-3 text-xs">
+              <span className="text-xl">👑</span>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-amber-300">
+                    {lang === 'vi' ? 'Token Người nổi tiếng / KOL trên X' : 'X Celebrity / KOL Meta'}
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] bg-amber-400 text-slate-950 font-extrabold uppercase">
+                    {token.celebrityRole === 'created_by' ? 'Do KOL tạo' : 'KOL tương tác'}
+                  </span>
+                </div>
+                <p className="text-slate-300 mt-0.5">
+                  {token.celebrityName} ({token.celebrityXHandle}) • {token.description}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Age & Recovery Metrics Strip */}
+          <div className="bg-slate-950/70 p-3.5 rounded-2xl border border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">{lang === 'vi' ? 'Tuổi Token' : 'Token Age'}</span>
+              <span className="text-sm font-bold text-purple-300 font-mono">{token.ageDays || 5} ngày</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">{lang === 'vi' ? 'Đỉnh (ATH)' : 'ATH Market Cap'}</span>
+              <span className="text-sm font-bold text-emerald-400 font-mono">${Math.round(token.athMarketCapUsd || token.marketCapUsd * 2.2).toLocaleString()}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">{lang === 'vi' ? 'Đáy Sập (ATL)' : 'ATL Floor'}</span>
+              <span className="text-sm font-bold text-rose-400 font-mono">${Math.round(token.atlMarketCapUsd || token.marketCapUsd * 0.2).toLocaleString()}</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold block">{lang === 'vi' ? 'Từ Đáy Lên' : 'From Floor'}</span>
+              <span className="text-sm font-bold text-teal-300 font-mono">
+                +{token.atlMarketCapUsd ? Math.round(((token.marketCapUsd / token.atlMarketCapUsd) - 1) * 100) : 150}%
+              </span>
+            </div>
+          </div>
           <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
             <div className="truncate">
               <span className="text-[10px] font-semibold text-slate-500 block uppercase">

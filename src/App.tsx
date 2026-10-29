@@ -46,6 +46,14 @@ export default function App() {
   const [minVolume, setMinVolume] = useState<number>(0);
   const [minLiquidity, setMinLiquidity] = useState<number>(0);
 
+  // Specific Strategy: Age (3-10d), ATH (200K-300K), ATL (~10K), Celebrity/KOL on X
+  const [minAgeDays, setMinAgeDays] = useState<number>(0);
+  const [maxAgeDays, setMaxAgeDays] = useState<number>(0);
+  const [minAthMarketCap, setMinAthMarketCap] = useState<number>(0);
+  const [maxAthMarketCap, setMaxAthMarketCap] = useState<number>(0);
+  const [maxAtlMarketCap, setMaxAtlMarketCap] = useState<number>(0);
+  const [onlyCelebrity, setOnlyCelebrity] = useState<boolean>(false);
+
   const [selectedToken, setSelectedToken] = useState<Token | null>(null);
 
   // AI Scan state
@@ -115,7 +123,9 @@ export default function App() {
     }
 
     // Category filter
-    if (filterCategory === 'hot-x') {
+    if (filterCategory === 'celebrity-kol') {
+      result = result.filter((t) => t.isCelebrityMeta);
+    } else if (filterCategory === 'hot-x') {
       result = result.filter((t) => t.isBoosted || t.xMentionTrend === 'Viral Leader');
     } else if (filterCategory === 'gainers') {
       result = result.filter((t) => (t.priceChange24h || 0) > 15);
@@ -137,6 +147,32 @@ export default function App() {
           t.category.toLowerCase().includes('dog') ||
           ['MOODENG', 'PNUT', 'CHILLGUY', 'POPCAT', 'WIF', 'BONK'].includes(t.symbol)
       );
+    }
+
+    // Age in Days filter (e.g. 3 to 10 days)
+    if (minAgeDays > 0) {
+      result = result.filter((t) => (t.ageDays || 0) >= minAgeDays);
+    }
+    if (maxAgeDays > 0) {
+      result = result.filter((t) => (t.ageDays || 0) <= maxAgeDays);
+    }
+
+    // ATH Market Cap filter (e.g. $200K - $300K)
+    if (minAthMarketCap > 0) {
+      result = result.filter((t) => (t.athMarketCapUsd || 0) >= minAthMarketCap);
+    }
+    if (maxAthMarketCap > 0) {
+      result = result.filter((t) => (t.athMarketCapUsd || 0) <= maxAthMarketCap);
+    }
+
+    // ATL Floor Market Cap filter (e.g. <= $15K (~10K))
+    if (maxAtlMarketCap > 0) {
+      result = result.filter((t) => (t.atlMarketCapUsd || 0) <= maxAtlMarketCap);
+    }
+
+    // Only Celebrity / KOL on X filter
+    if (onlyCelebrity) {
+      result = result.filter((t) => t.isCelebrityMeta);
     }
 
     // Market Cap filter
@@ -170,13 +206,44 @@ export default function App() {
     }
 
     return result;
-  }, [tokens, searchQuery, filterCategory, sortBy, minMarketCap, maxMarketCap, minVolume, minLiquidity]);
+  }, [
+    tokens, 
+    searchQuery, 
+    filterCategory, 
+    sortBy, 
+    minMarketCap, 
+    maxMarketCap, 
+    minVolume, 
+    minLiquidity,
+    minAgeDays,
+    maxAgeDays,
+    minAthMarketCap,
+    maxAthMarketCap,
+    maxAtlMarketCap,
+    onlyCelebrity
+  ]);
+
+  const handleApplyCelebrityStrategyPreset = () => {
+    setMinAgeDays(3);
+    setMaxAgeDays(10);
+    setMinAthMarketCap(200_000);
+    setMaxAthMarketCap(300_000);
+    setMaxAtlMarketCap(15_000);
+    setOnlyCelebrity(true);
+    setFilterCategory('celebrity-kol');
+  };
 
   const handleResetFilters = () => {
     setMinMarketCap(0);
     setMaxMarketCap(0);
     setMinVolume(0);
     setMinLiquidity(0);
+    setMinAgeDays(0);
+    setMaxAgeDays(0);
+    setMinAthMarketCap(0);
+    setMaxAthMarketCap(0);
+    setMaxAtlMarketCap(0);
+    setOnlyCelebrity(false);
     setFilterCategory('all');
     setSearchQuery('');
   };
@@ -253,7 +320,7 @@ export default function App() {
 
             </div>
 
-            {/* Advanced Filters Toolbar (Market Cap, Volume, Liquidity) */}
+            {/* Advanced Filters Toolbar (Market Cap, Volume, Liquidity, Age, ATH, ATL, Celebrity) */}
             <FilterToolbar
               minMarketCap={minMarketCap}
               setMinMarketCap={setMinMarketCap}
@@ -263,6 +330,19 @@ export default function App() {
               setMinVolume={setMinVolume}
               minLiquidity={minLiquidity}
               setMinLiquidity={setMinLiquidity}
+              minAgeDays={minAgeDays}
+              setMinAgeDays={setMinAgeDays}
+              maxAgeDays={maxAgeDays}
+              setMaxAgeDays={setMaxAgeDays}
+              minAthMarketCap={minAthMarketCap}
+              setMinAthMarketCap={setMinAthMarketCap}
+              maxAthMarketCap={maxAthMarketCap}
+              setMaxAthMarketCap={setMaxAthMarketCap}
+              maxAtlMarketCap={maxAtlMarketCap}
+              setMaxAtlMarketCap={setMaxAtlMarketCap}
+              onlyCelebrity={onlyCelebrity}
+              setOnlyCelebrity={setOnlyCelebrity}
+              onApplyCelebrityStrategyPreset={handleApplyCelebrityStrategyPreset}
               totalCount={tokens.length}
               filteredCount={filteredTokens.length}
               lang={lang}
@@ -274,7 +354,7 @@ export default function App() {
               <button
                 onClick={() => setFilterCategory('all')}
                 className={`px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1.5 whitespace-nowrap cursor-pointer ${
-                  filterCategory === 'all'
+                  filterCategory === 'all' && !onlyCelebrity
                     ? 'bg-slate-800 text-white font-bold border border-slate-700 shadow-sm'
                     : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-slate-800'
                 }`}
@@ -282,6 +362,28 @@ export default function App() {
                 <Layers className="w-3.5 h-3.5" />
                 <span>{lang === 'vi' ? 'Tất cả memecoin' : 'All Memecoins'}</span>
                 <span className="text-[10px] bg-slate-800/80 px-1.5 py-0.2 rounded-full text-slate-400">{tokens.length}</span>
+              </button>
+
+              {/* Special Celebrity / KOL Strategy Pill */}
+              <button
+                onClick={() => {
+                  if (filterCategory === 'celebrity-kol') {
+                    handleResetFilters();
+                  } else {
+                    handleApplyCelebrityStrategyPreset();
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-xl transition-all flex items-center space-x-1.5 whitespace-nowrap cursor-pointer ${
+                  filterCategory === 'celebrity-kol' || onlyCelebrity
+                    ? 'bg-amber-400 text-slate-950 font-black shadow-lg shadow-amber-500/20 ring-2 ring-amber-300'
+                    : 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30'
+                }`}
+              >
+                <span>👑</span>
+                <span>{lang === 'vi' ? 'Kèo KOL X (Tuổi 3-10d | ATH 200K-300K | ATL 10K)' : 'X KOL Meta (3-10d | ATH 200K-300K | ATL 10K)'}</span>
+                <span className="text-[10px] bg-slate-950/40 text-amber-950 px-1.5 py-0.2 rounded-full font-black">
+                  {tokens.filter(t => t.isCelebrityMeta).length}
+                </span>
               </button>
 
               <button

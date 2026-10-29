@@ -24,6 +24,14 @@ export interface Token {
   isPumpFun: boolean;
   isBoosted: boolean;
   xMentionTrend: string;
+  ageDays: number;
+  pairCreatedAt?: number;
+  athMarketCapUsd: number;
+  atlMarketCapUsd: number;
+  isCelebrityMeta?: boolean;
+  celebrityName?: string;
+  celebrityXHandle?: string;
+  celebrityRole?: 'created_by' | 'inspired_by' | 'endorsed_by';
 }
 
 export interface AIScanResult {
@@ -33,4 +41,4 @@ export interface AIScanResult {
   sources?: { title: string; url: string }[];
 }
 
-export type FilterCategory = 'all' | 'hot-x' | 'gainers' | 'pumpfun' | 'ai-agents' | 'culture-animals';
+export type FilterCategory = 'all' | 'celebrity-kol' | 'hot-x' | 'gainers' | 'pumpfun' | 'ai-agents' | 'culture-animals';
