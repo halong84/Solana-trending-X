@@ -57,15 +57,13 @@ export default function App() {
   const [minVolume, setMinVolume] = useState<number>(0);
   const [minLiquidity, setMinLiquidity] = useState<number>(0);
 
-  // Specific Strategy: Age (3-10d), ATH (200K-300K), ATL (~10K)
+  // Specific Strategy: Age (3-10d), ATH (200K-300K), ATL tối thiểu là 10K
   const [minAgeDays, setMinAgeDays] = useState<number>(0);
   const [maxAgeDays, setMaxAgeDays] = useState<number>(0);
   const [minAthMarketCap, setMinAthMarketCap] = useState<number>(0);
   const [maxAthMarketCap, setMaxAthMarketCap] = useState<number>(0);
+  const [minAtlMarketCap, setMinAtlMarketCap] = useState<number>(0);
   const [maxAtlMarketCap, setMaxAtlMarketCap] = useState<number>(0);
-
-  // TIÊU CHÍ ĐỘC LẬP: KOL & Người nổi tiếng trên X
-  const [celebrityFilter, setCelebrityFilter] = useState<CelebrityFilter>('all');
 
   // TINH CHỈNH TIÊU CHÍ: Nguồn phát hành & An toàn thanh khoản (Anti-Rug)
   const [launchSourceFilter, setLaunchSourceFilter] = useState<LaunchSourceFilter>('all');
@@ -165,17 +163,6 @@ export default function App() {
       );
     }
 
-    // TIÊU CHÍ ĐỘC LẬP: KOL & Người nổi tiếng trên X
-    if (celebrityFilter === 'any_celeb') {
-      result = result.filter((t) => t.isCelebrityMeta);
-    } else if (celebrityFilter === 'created_by') {
-      result = result.filter((t) => t.isCelebrityMeta && t.celebrityRole === 'created_by');
-    } else if (celebrityFilter === 'endorsed_or_inspired') {
-      result = result.filter(
-        (t) => t.isCelebrityMeta && (t.celebrityRole === 'endorsed_by' || t.celebrityRole === 'inspired_by')
-      );
-    }
-
     // Age in Days filter (e.g. 3 to 10 days)
     if (minAgeDays > 0) {
       result = result.filter((t) => (t.ageDays || 0) >= minAgeDays);
@@ -192,7 +179,10 @@ export default function App() {
       result = result.filter((t) => (t.athMarketCapUsd || 0) <= maxAthMarketCap);
     }
 
-    // ATL Floor Market Cap filter (e.g. <= $15K (~10K))
+    // ATL Floor Market Cap filter: Min ATL (tối thiểu là 10K) và Max ATL
+    if (minAtlMarketCap > 0) {
+      result = result.filter((t) => (t.atlMarketCapUsd || 0) >= minAtlMarketCap);
+    }
     if (maxAtlMarketCap > 0) {
       result = result.filter((t) => (t.atlMarketCapUsd || 0) <= maxAtlMarketCap);
     }
@@ -276,20 +266,52 @@ export default function App() {
     maxAgeDays,
     minAthMarketCap,
     maxAthMarketCap,
+    minAtlMarketCap,
     maxAtlMarketCap,
-    celebrityFilter,
     launchSourceFilter,
     lpLockFilter,
     unruggableFilter
   ]);
 
-  const handleApplyCelebrityStrategyPreset = () => {
+  // Thống kê chính xác số lượng token theo từng Narrative & Chiến lược mục tiêu
+  const categoryCounts = useMemo(() => {
+    return {
+      all: tokens.length,
+      hotX: tokens.filter((t) => t.isBoosted || t.xMentionTrend === 'Viral Leader').length,
+      gainers: tokens.filter((t) => (t.priceChange24h || 0) > 15).length,
+      pumpfun: tokens.filter((t) => t.isPumpFun || t.address.toLowerCase().endsWith('pump') || t.launchSource === 'Pump.fun').length,
+      aiAgents: tokens.filter(
+        (t) =>
+          t.category.toLowerCase().includes('ai') ||
+          t.name.toLowerCase().includes('ai') ||
+          ['FARTCOIN', 'AI16Z', 'GRIFFAIN', 'GOAT', 'ACT', 'SWARMS', 'ZEREBRO'].includes(t.symbol)
+      ).length,
+      cultureAnimals: tokens.filter(
+        (t) =>
+          t.category.toLowerCase().includes('animal') ||
+          t.category.toLowerCase().includes('culture') ||
+          t.category.toLowerCase().includes('cat') ||
+          t.category.toLowerCase().includes('dog') ||
+          ['MOODENG', 'PNUT', 'CHILLGUY', 'POPCAT', 'WIF', 'BONK'].includes(t.symbol)
+      ).length,
+      strategyPreset: tokens.filter(
+        (t) =>
+          (t.ageDays || 0) >= 3 &&
+          (t.ageDays || 0) <= 10 &&
+          (t.athMarketCapUsd || 0) >= 200_000 &&
+          (t.athMarketCapUsd || 0) <= 300_000 &&
+          (t.atlMarketCapUsd || 0) >= 10_000
+      ).length,
+    };
+  }, [tokens]);
+
+  const handleApplyStrategyPreset = () => {
     setMinAgeDays(3);
     setMaxAgeDays(10);
     setMinAthMarketCap(200_000);
     setMaxAthMarketCap(300_000);
-    setMaxAtlMarketCap(15_000);
-    setCelebrityFilter('any_celeb');
+    setMinAtlMarketCap(10_000); // ATL tối thiểu là 10K
+    setMaxAtlMarketCap(0); // Không giới hạn trần ATL
   };
 
   const handleResetFilters = () => {
@@ -301,8 +323,8 @@ export default function App() {
     setMaxAgeDays(0);
     setMinAthMarketCap(0);
     setMaxAthMarketCap(0);
+    setMinAtlMarketCap(0);
     setMaxAtlMarketCap(0);
-    setCelebrityFilter('all');
     setLaunchSourceFilter('all');
     setLpLockFilter('all');
     setUnruggableFilter('all');
@@ -366,8 +388,13 @@ export default function App() {
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Market Metrics Ticker */}
-        <MarketMetricsBar tokens={tokens} lang={lang} />
+        {/* Market Metrics Ticker with Accurate Token Statistics */}
+        <MarketMetricsBar 
+          tokens={tokens} 
+          strategyPresetMatches={categoryCounts.strategyPreset}
+          onApplyStrategyPreset={handleApplyStrategyPreset}
+          lang={lang} 
+        />
 
         {/* View 1: Main Token Board */}
         {activeTab === 'board' && (
@@ -441,7 +468,7 @@ export default function App() {
               )}
             </div>
 
-            {/* Advanced Filters Toolbar (Market Cap, Volume, Liquidity, Age, ATH, ATL, Independent Celebrity, Launchpad, Refined LP Lock) */}
+            {/* Advanced Filters Toolbar (Market Cap, Volume, Liquidity, Age, ATH, ATL, Launchpad, Refined LP Lock) */}
             <FilterToolbar
               minMarketCap={minMarketCap}
               setMinMarketCap={setMinMarketCap}
@@ -459,100 +486,25 @@ export default function App() {
               setMinAthMarketCap={setMinAthMarketCap}
               maxAthMarketCap={maxAthMarketCap}
               setMaxAthMarketCap={setMaxAthMarketCap}
+              minAtlMarketCap={minAtlMarketCap}
+              setMinAtlMarketCap={setMinAtlMarketCap}
               maxAtlMarketCap={maxAtlMarketCap}
               setMaxAtlMarketCap={setMaxAtlMarketCap}
-              celebrityFilter={celebrityFilter}
-              setCelebrityFilter={setCelebrityFilter}
               launchSourceFilter={launchSourceFilter}
               setLaunchSourceFilter={setLaunchSourceFilter}
               lpLockFilter={lpLockFilter}
               setLpLockFilter={setLpLockFilter}
               unruggableFilter={unruggableFilter}
               setUnruggableFilter={setUnruggableFilter}
-              onApplyCelebrityStrategyPreset={handleApplyCelebrityStrategyPreset}
+              onApplyStrategyPreset={handleApplyStrategyPreset}
+              matchingPresetCount={categoryCounts.strategyPreset}
               totalCount={tokens.length}
               filteredCount={filteredTokens.length}
               lang={lang}
               onResetFilters={handleResetFilters}
             />
 
-            {/* DEDICATED INDEPENDENT CELEBRITY / KOL FILTER BAR */}
-            <div className="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-2.5 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
-              <div className="flex items-center space-x-2">
-                <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0">
-                  <Crown className="w-4 h-4 text-amber-400" />
-                </span>
-                <div>
-                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <span>{lang === 'vi' ? 'Tiêu chí Độc lập: KOL & Người nổi tiếng trên X' : 'Independent Filter: Celebrity & KOL on X'}</span>
-                    <span className="px-1.5 py-0.2 rounded text-[9px] bg-amber-400 text-slate-950 font-black uppercase">ĐỘC LẬP</span>
-                  </span>
-                  <p className="text-[10px] text-amber-200/70">
-                    {lang === 'vi' 
-                      ? 'Lọc độc lập mọi lúc, không làm mất danh mục Narrative hay điều kiện tìm kiếm của bạn' 
-                      : 'Independent filter, works alongside any narrative category or search'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
-                <button
-                  onClick={() => setCelebrityFilter('all')}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    celebrityFilter === 'all'
-                      ? 'bg-slate-800 text-white border border-slate-600 shadow-sm'
-                      : 'bg-slate-950/70 text-slate-400 hover:text-slate-200 border border-slate-800'
-                  }`}
-                >
-                  {lang === 'vi' ? '🌐 Tất cả token' : 'All'}
-                  <span className="ml-1 text-[10px] opacity-75 font-mono">({tokens.length})</span>
-                </button>
-
-                <button
-                  onClick={() => setCelebrityFilter(celebrityFilter === 'any_celeb' ? 'all' : 'any_celeb')}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                    celebrityFilter === 'any_celeb'
-                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300'
-                      : 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30'
-                  }`}
-                >
-                  <span>👑 {lang === 'vi' ? 'Tất cả KOL / Celeb' : 'All Celeb'}</span>
-                  <span className={`text-[10px] px-1 rounded-full ${celebrityFilter === 'any_celeb' ? 'bg-slate-950/40 text-amber-950 font-black' : 'bg-amber-500/20 text-amber-300'}`}>
-                    {tokens.filter(t => t.isCelebrityMeta).length}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setCelebrityFilter(celebrityFilter === 'created_by' ? 'all' : 'created_by')}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                    celebrityFilter === 'created_by'
-                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300'
-                      : 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30'
-                  }`}
-                >
-                  <span>✍️ {lang === 'vi' ? 'Do KOL tạo' : 'Created by KOL'}</span>
-                  <span className={`text-[10px] px-1 rounded-full ${celebrityFilter === 'created_by' ? 'bg-slate-950/40 text-amber-950 font-black' : 'bg-amber-500/20 text-amber-300'}`}>
-                    {tokens.filter(t => t.isCelebrityMeta && t.celebrityRole === 'created_by').length}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => setCelebrityFilter(celebrityFilter === 'endorsed_or_inspired' ? 'all' : 'endorsed_or_inspired')}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                    celebrityFilter === 'endorsed_or_inspired'
-                      ? 'bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-300'
-                      : 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30'
-                  }`}
-                >
-                  <span>⚡ {lang === 'vi' ? 'KOL shill / Cảm hứng X' : 'KOL shill/narrative'}</span>
-                  <span className={`text-[10px] px-1 rounded-full ${celebrityFilter === 'endorsed_or_inspired' ? 'bg-slate-950/40 text-amber-950 font-black' : 'bg-amber-500/20 text-amber-300'}`}>
-                    {tokens.filter(t => t.isCelebrityMeta && (t.celebrityRole === 'endorsed_by' || t.celebrityRole === 'inspired_by')).length}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* Category / Narrative Theme Filter Pills */}
+            {/* Category / Narrative Theme Filter Pills with Accurate Live Counts */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
               <button
                 onClick={() => setFilterCategory('all')}
@@ -564,7 +516,9 @@ export default function App() {
               >
                 <Layers className="w-3.5 h-3.5" />
                 <span>{lang === 'vi' ? 'Tất cả Narrative' : 'All Themes'}</span>
-                <span className="text-[10px] bg-slate-800/80 px-1.5 py-0.2 rounded-full text-slate-400">{tokens.length}</span>
+                <span className="text-[10px] bg-slate-800/90 px-1.5 py-0.2 rounded-full font-bold text-slate-300 border border-slate-700/60">
+                  {categoryCounts.all}
+                </span>
               </button>
 
               <button
@@ -577,6 +531,9 @@ export default function App() {
               >
                 <Flame className="w-3.5 h-3.5 text-amber-400" />
                 <span>{lang === 'vi' ? 'Viral & Hot trên X' : 'Trending on X'}</span>
+                <span className="text-[10px] bg-amber-500/20 px-1.5 py-0.2 rounded-full font-bold text-amber-300 border border-amber-500/30">
+                  {categoryCounts.hotX}
+                </span>
               </button>
 
               <button
@@ -589,6 +546,9 @@ export default function App() {
               >
                 <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{lang === 'vi' ? 'Tăng > 15% (24h)' : '24h Gainers > 15%'}</span>
+                <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.2 rounded-full font-bold text-emerald-300 border border-emerald-500/30">
+                  {categoryCounts.gainers}
+                </span>
               </button>
 
               <button
@@ -601,6 +561,9 @@ export default function App() {
               >
                 <Zap className="w-3.5 h-3.5 text-teal-400" />
                 <span>Pump.fun Trenches</span>
+                <span className="text-[10px] bg-teal-500/20 px-1.5 py-0.2 rounded-full font-bold text-teal-300 border border-teal-500/30">
+                  {categoryCounts.pumpfun}
+                </span>
               </button>
 
               <button
@@ -613,6 +576,9 @@ export default function App() {
               >
                 <Bot className="w-3.5 h-3.5 text-purple-400" />
                 <span>{lang === 'vi' ? 'Meta AI Agents' : 'AI Agent Meta'}</span>
+                <span className="text-[10px] bg-purple-500/20 px-1.5 py-0.2 rounded-full font-bold text-purple-300 border border-purple-500/30">
+                  {categoryCounts.aiAgents}
+                </span>
               </button>
 
               <button
@@ -625,6 +591,9 @@ export default function App() {
               >
                 <Dog className="w-3.5 h-3.5 text-pink-400" />
                 <span>{lang === 'vi' ? 'Động vật & Linh vật' : 'Animals & Mascot Cults'}</span>
+                <span className="text-[10px] bg-pink-500/20 px-1.5 py-0.2 rounded-full font-bold text-pink-300 border border-pink-500/30">
+                  {categoryCounts.cultureAnimals}
+                </span>
               </button>
             </div>
 

@@ -19,8 +19,7 @@ import {
   Rocket,
   Flame,
   CheckCircle2,
-  AlertTriangle,
-  Crown
+  AlertTriangle
 } from 'lucide-react';
 import { 
   LaunchSourceFilter, 
@@ -46,11 +45,10 @@ interface FilterToolbarProps {
   setMinAthMarketCap: (val: number) => void;
   maxAthMarketCap: number;
   setMaxAthMarketCap: (val: number) => void;
+  minAtlMarketCap: number;
+  setMinAtlMarketCap: (val: number) => void;
   maxAtlMarketCap: number;
   setMaxAtlMarketCap: (val: number) => void;
-  // Tiêu chí độc lập: KOL & Người nổi tiếng
-  celebrityFilter: CelebrityFilter;
-  setCelebrityFilter: (val: CelebrityFilter) => void;
   // Nguồn phát hành
   launchSourceFilter: LaunchSourceFilter;
   setLaunchSourceFilter: (val: LaunchSourceFilter) => void;
@@ -59,7 +57,8 @@ interface FilterToolbarProps {
   setLpLockFilter: (val: LpLockFilter) => void;
   unruggableFilter: UnruggableFilter;
   setUnruggableFilter: (val: UnruggableFilter) => void;
-  onApplyCelebrityStrategyPreset: () => void;
+  onApplyStrategyPreset: () => void;
+  matchingPresetCount: number;
   totalCount: number;
   filteredCount: number;
   lang: 'vi' | 'en';
@@ -83,17 +82,18 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
   setMinAthMarketCap,
   maxAthMarketCap,
   setMaxAthMarketCap,
+  minAtlMarketCap,
+  setMinAtlMarketCap,
   maxAtlMarketCap,
   setMaxAtlMarketCap,
-  celebrityFilter,
-  setCelebrityFilter,
   launchSourceFilter,
   setLaunchSourceFilter,
   lpLockFilter,
   setLpLockFilter,
   unruggableFilter,
   setUnruggableFilter,
-  onApplyCelebrityStrategyPreset,
+  onApplyStrategyPreset,
+  matchingPresetCount,
   totalCount,
   filteredCount,
   lang,
@@ -101,14 +101,13 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Check if celebrity preset is active
-  const isCelebrityPresetActive = 
+  // Check if strategy preset is active: Age 3-10d, ATH 200K-300K, ATL min 10K (Không yêu cầu KOL)
+  const isStrategyPresetActive = 
     minAgeDays === 3 && 
     maxAgeDays === 10 && 
     minAthMarketCap === 200_000 && 
     maxAthMarketCap === 300_000 && 
-    maxAtlMarketCap === 15_000 && 
-    celebrityFilter !== 'all';
+    minAtlMarketCap === 10_000;
 
   // Count active criteria
   const activeCount = [
@@ -117,8 +116,7 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
     minLiquidity > 0,
     minAgeDays > 0 || maxAgeDays > 0,
     minAthMarketCap > 0 || maxAthMarketCap > 0,
-    maxAtlMarketCap > 0,
-    celebrityFilter !== 'all',
+    minAtlMarketCap > 0 || maxAtlMarketCap > 0,
     launchSourceFilter !== 'all',
     lpLockFilter !== 'all',
     unruggableFilter !== 'all',
@@ -134,39 +132,39 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
   return (
     <div className="bg-slate-900/80 border border-slate-800/90 rounded-2xl p-3.5 backdrop-blur-md shadow-md space-y-3">
       
-      {/* Quick Strategy Preset Banner */}
-      <div className="bg-gradient-to-r from-amber-500/15 via-purple-500/10 to-slate-900 border border-amber-500/30 rounded-xl p-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+      {/* Quick Strategy Preset Banner: Tuổi 3-10d, ATH 200K-300K, ATL tối thiểu 10K (Bỏ KOL) */}
+      <div className="bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-slate-900 border border-emerald-500/30 rounded-xl p-2.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
         <div className="flex items-center space-x-2">
-          <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0">
-            <Star className="w-4 h-4 text-amber-400 fill-amber-400/30" />
+          <span className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex-shrink-0">
+            <Star className="w-4 h-4 text-emerald-400 fill-emerald-400/30" />
           </span>
           <div>
-            <div className="flex items-center space-x-1.5">
+            <div className="flex items-center space-x-1.5 flex-wrap gap-1">
               <span className="text-xs font-bold text-white">
-                {lang === 'vi' ? 'Chiến lược Săn Kèo KOL / Celebrity trên X' : 'X Celebrity / KOL Meta Scanner'}
+                {lang === 'vi' ? 'Chiến lược Săn Kèo: Tuổi 3-10 ngày • ATH $200K-$300K • ATL tối thiểu $10K' : 'Strategy Preset: Age 3-10d • ATH $200K-$300K • ATL Min $10K'}
               </span>
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-400 text-slate-950 uppercase">
-                HOT PRESET
+              <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-emerald-400 text-slate-950 uppercase">
+                {matchingPresetCount} TOKEN KHỚP
               </span>
             </div>
-            <p className="text-[11px] text-amber-200/80">
+            <p className="text-[11px] text-emerald-200/80">
               {lang === 'vi'
-                ? 'Lọc nhanh: Tuổi 3-10 ngày • ATH $200K-$300K • ATL đáy ~$10K • Liên quan Người nổi tiếng trên X'
-                : 'Fast Preset: Age 3-10d • ATH $200K-$300K • ATL floor ~$10K • Celebrity / KOL on X'}
+                ? `Lọc chuẩn on-chain: Tuổi 3 đến 10 ngày • Đỉnh ATH $200K-$300K • Đáy ATL tối thiểu $10,000 (Có ${matchingPresetCount} memecoin thỏa mãn)`
+                : `On-chain filters: Age 3 to 10 days • ATH $200K-$300K • ATL min $10,000 (${matchingPresetCount} memecoins match)`}
             </p>
           </div>
         </div>
 
         <button
-          onClick={onApplyCelebrityStrategyPreset}
+          onClick={onApplyStrategyPreset}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer flex-shrink-0 ${
-            isCelebrityPresetActive
-              ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-500/30 ring-2 ring-amber-300'
-              : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
+            isStrategyPresetActive
+              ? 'bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/30 ring-2 ring-emerald-300'
+              : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
           }`}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>{isCelebrityPresetActive ? (lang === 'vi' ? '✓ Đang bật Preset này' : '✓ Active Preset') : (lang === 'vi' ? 'Áp dụng bộ lọc này ngay' : 'Apply Preset')}</span>
+          <span>{isStrategyPresetActive ? (lang === 'vi' ? `✓ Đang lọc (${filteredCount} token)` : `✓ Active (${filteredCount})`) : (lang === 'vi' ? `Áp dụng ngay (${matchingPresetCount} token)` : `Apply (${matchingPresetCount})`)}</span>
         </button>
       </div>
 
@@ -192,29 +190,21 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
           </button>
 
           {/* Result counter indicator */}
-          <span className="text-xs text-slate-400">
-            {lang === 'vi' ? 'Hiển thị:' : 'Showing:'}{' '}
-            <strong className="text-emerald-400 font-bold">{filteredCount}</strong> / {totalCount} tokens
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-slate-300 font-medium">
+              {lang === 'vi' ? 'Hiển thị:' : 'Showing:'}{' '}
+              <strong className="text-emerald-400 font-black text-sm">{filteredCount}</strong> / {totalCount} token
+            </span>
+            {filteredCount < totalCount && (
+              <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700/60 hidden sm:inline">
+                {lang === 'vi' ? `(Lọc bỏ ${totalCount - filteredCount} token)` : `(Filtered ${totalCount - filteredCount})`}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Active Filter Chips & Quick Reset */}
         <div className="flex items-center flex-wrap gap-1.5 text-xs">
-          {/* Tiêu chí độc lập: KOL */}
-          {celebrityFilter !== 'all' && (
-            <span className="px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center gap-1 text-[11px] font-semibold">
-              <Crown className="w-3 h-3 text-amber-400" />
-              {celebrityFilter === 'created_by' 
-                ? (lang === 'vi' ? 'Do KOL tạo' : 'Created by KOL') 
-                : celebrityFilter === 'endorsed_or_inspired'
-                ? (lang === 'vi' ? 'KOL shill / Cảm hứng X' : 'KOL shill/inspired')
-                : (lang === 'vi' ? 'Tất cả KOL / Celeb X' : 'All Celeb / KOL')}
-              <button onClick={() => setCelebrityFilter('all')} className="hover:text-rose-400 ml-0.5 cursor-pointer">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          )}
-
           {/* Tiêu chí tinh chỉnh: Thanh khoản đã khóa */}
           {lpLockFilter !== 'all' && (
             <span className={`px-2 py-0.5 rounded-lg border flex items-center gap-1 text-[11px] font-semibold ${
@@ -267,6 +257,15 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
               <TrendingUp className="w-3 h-3 text-emerald-400" />
               ATH {formatShortNumber(minAthMarketCap)}-{formatShortNumber(maxAthMarketCap)}
               <button onClick={() => { setMinAthMarketCap(0); setMaxAthMarketCap(0); }} className="hover:text-rose-400 ml-0.5 cursor-pointer">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {minAtlMarketCap > 0 && (
+            <span className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-300 flex items-center gap-1 text-[11px] font-semibold">
+              <TrendingDown className="w-3 h-3 text-rose-400" />
+              ATL &ge; {formatShortNumber(minAtlMarketCap)}
+              <button onClick={() => setMinAtlMarketCap(0)} className="hover:text-rose-400 ml-0.5 cursor-pointer">
                 <X className="w-3 h-3" />
               </button>
             </span>
@@ -330,89 +329,159 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
       {isOpen && (
         <div className="pt-3 border-t border-slate-800/80 space-y-4 text-xs">
           
-          {/* SECTION 1: TIÊU CHÍ ĐỘC LẬP - KOL & NGƯỜI NỔI TIẾNG TRÊN X */}
-          <div className="bg-gradient-to-r from-amber-500/10 via-slate-950 to-slate-900 p-3.5 rounded-xl border border-amber-500/30 space-y-2.5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-              <span className="font-bold text-amber-300 flex items-center gap-2 text-xs">
-                <Crown className="w-4 h-4 text-amber-400" />
-                <span>{lang === 'vi' ? 'TIÊU CHÍ ĐỘC LẬP: KOL & NGƯỜI NỔI TIẾNG TRÊN X' : 'INDEPENDENT CRITERIA: CELEBRITY & KOL ON X'}</span>
-              </span>
-              <span className="text-[11px] text-amber-200/70">
-                {lang === 'vi' ? 'Tự do kết hợp độc lập với mọi Narrative, thời gian, vốn hóa hay bệ phóng' : 'Freely combine with any category, age, market cap or launchpad'}
-              </span>
+          {/* SECTION 1: THỜI GIAN, ATH & ATL (Tuổi 3-10d, ATH 200K-300K, ATL tối thiểu 10K) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800/70">
+            
+            {/* Age Filter */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-purple-400" />
+                  {lang === 'vi' ? 'Tuổi Token (Age)' : 'Token Age (Days)'}
+                </span>
+                {(minAgeDays > 0 || maxAgeDays > 0) && (
+                  <button onClick={() => { setMinAgeDays(0); setMaxAgeDays(0); }} className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer">
+                    {lang === 'vi' ? 'Mặc định' : 'Clear'}
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => { setMinAgeDays(3); setMaxAgeDays(10); }}
+                  className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer w-full text-center ${
+                    minAgeDays === 3 && maxAgeDays === 10
+                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  3 - 10 ngày (Mục tiêu)
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-0.5">Min ngày</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={minAgeDays || ''}
+                    onChange={(e) => setMinAgeDays(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-0.5">Max ngày</label>
+                  <input
+                    type="number"
+                    placeholder="Không giới hạn"
+                    value={maxAgeDays || ''}
+                    onChange={(e) => setMaxAgeDays(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-              <button
-                type="button"
-                onClick={() => setCelebrityFilter('all')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left flex items-center justify-between border ${
-                  celebrityFilter === 'all'
-                    ? 'bg-slate-800 text-white border-slate-600 shadow-sm'
-                    : 'bg-slate-950/80 hover:bg-slate-900 text-slate-400 border-slate-800/80'
-                }`}
-              >
+            {/* ATH Market Cap */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                  {lang === 'vi' ? 'Vốn hóa Đỉnh (ATH)' : 'ATH Market Cap'}
+                </span>
+                {(minAthMarketCap > 0 || maxAthMarketCap > 0) && (
+                  <button onClick={() => { setMinAthMarketCap(0); setMaxAthMarketCap(0); }} className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer">
+                    {lang === 'vi' ? 'Mặc định' : 'Clear'}
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => { setMinAthMarketCap(200_000); setMaxAthMarketCap(300_000); }}
+                  className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer w-full text-center ${
+                    minAthMarketCap === 200_000 && maxAthMarketCap === 300_000
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  $200K - $300K (Mục tiêu)
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
                 <div>
-                  <span className="block font-bold text-slate-200">{lang === 'vi' ? '🌐 Tất cả token' : 'All Tokens'}</span>
-                  <span className="text-[10px] text-slate-400">{lang === 'vi' ? 'Không bắt buộc KOL' : 'No celebrity requirement'}</span>
+                  <label className="text-[9px] text-slate-500 block mb-0.5">Min ATH ($)</label>
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={minAthMarketCap || ''}
+                    onChange={(e) => setMinAthMarketCap(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
+                  />
                 </div>
-                {celebrityFilter === 'all' && <CheckCircle2 className="w-4 h-4 text-slate-300" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCelebrityFilter('any_celeb')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left flex items-center justify-between border ${
-                  celebrityFilter === 'any_celeb'
-                    ? 'bg-amber-400 text-slate-950 font-bold border-amber-300 shadow-md ring-2 ring-amber-300/40'
-                    : 'bg-slate-950/80 hover:bg-slate-900 text-amber-300/90 border-amber-500/30'
-                }`}
-              >
                 <div>
-                  <span className="block font-bold">{lang === 'vi' ? '👑 Tất cả liên quan KOL' : 'All Celebrity / KOL'}</span>
-                  <span className={`text-[10px] ${celebrityFilter === 'any_celeb' ? 'text-slate-800' : 'text-slate-400'}`}>
-                    {lang === 'vi' ? 'Cả do tạo & được shill trên X' : 'Both created & shilled'}
-                  </span>
+                  <label className="text-[9px] text-slate-500 block mb-0.5">Max ATH ($)</label>
+                  <input
+                    type="number"
+                    placeholder="Không giới hạn"
+                    value={maxAthMarketCap || ''}
+                    onChange={(e) => setMaxAthMarketCap(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
+                  />
                 </div>
-                {celebrityFilter === 'any_celeb' && <CheckCircle2 className="w-4 h-4 text-slate-950" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCelebrityFilter('created_by')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left flex items-center justify-between border ${
-                  celebrityFilter === 'created_by'
-                    ? 'bg-amber-400 text-slate-950 font-bold border-amber-300 shadow-md ring-2 ring-amber-300/40'
-                    : 'bg-slate-950/80 hover:bg-slate-900 text-amber-300/90 border-amber-500/30'
-                }`}
-              >
-                <div>
-                  <span className="block font-bold">{lang === 'vi' ? '✍️ Do KOL trực tiếp tạo' : 'Created by Celebrity'}</span>
-                  <span className={`text-[10px] ${celebrityFilter === 'created_by' ? 'text-slate-800' : 'text-slate-400'}`}>
-                    {lang === 'vi' ? 'Caitlyn Jenner, Iggy, Derulo...' : 'Jenner, Iggy, Derulo...'}
-                  </span>
-                </div>
-                {celebrityFilter === 'created_by' && <CheckCircle2 className="w-4 h-4 text-slate-950" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCelebrityFilter('endorsed_or_inspired')}
-                className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer text-left flex items-center justify-between border ${
-                  celebrityFilter === 'endorsed_or_inspired'
-                    ? 'bg-amber-400 text-slate-950 font-bold border-amber-300 shadow-md ring-2 ring-amber-300/40'
-                    : 'bg-slate-950/80 hover:bg-slate-900 text-amber-300/90 border-amber-500/30'
-                }`}
-              >
-                <div>
-                  <span className="block font-bold">{lang === 'vi' ? '⚡ KOL shill & Cảm hứng X' : 'KOL shill / X Narrative'}</span>
-                  <span className={`text-[10px] ${celebrityFilter === 'endorsed_or_inspired' ? 'text-slate-800' : 'text-slate-400'}`}>
-                    {lang === 'vi' ? 'Trump, Elon, Portnoy, Tate, Speed' : 'Trump, Elon, Portnoy, Speed'}
-                  </span>
-                </div>
-                {celebrityFilter === 'endorsed_or_inspired' && <CheckCircle2 className="w-4 h-4 text-slate-950" />}
-              </button>
+              </div>
             </div>
+
+            {/* ATL Market Cap: Hỗ trợ Min ATL tối thiểu 10K */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
+                  {lang === 'vi' ? 'Đáy Sập (ATL Floor)' : 'ATL Floor Market Cap'}
+                </span>
+                {(minAtlMarketCap > 0 || maxAtlMarketCap > 0) && (
+                  <button onClick={() => { setMinAtlMarketCap(0); setMaxAtlMarketCap(0); }} className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer">
+                    {lang === 'vi' ? 'Mặc định' : 'Clear'}
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => { setMinAtlMarketCap(10_000); setMaxAtlMarketCap(0); }}
+                  className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer w-full text-center ${
+                    minAtlMarketCap === 10_000
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold'
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  ATL tối thiểu &ge; $10K (Mục tiêu)
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-0.5">Min ATL ($) (Tối thiểu)</label>
+                  <input
+                    type="number"
+                    placeholder="Ví dụ: 10000"
+                    value={minAtlMarketCap || ''}
+                    onChange={(e) => setMinAtlMarketCap(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-0.5">Max ATL ($)</label>
+                  <input
+                    type="number"
+                    placeholder="Không giới hạn"
+                    value={maxAtlMarketCap || ''}
+                    onChange={(e) => setMaxAtlMarketCap(Number(e.target.value) || 0)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* SECTION 2: TINH CHỈNH AN TOÀN THANH KHOẢN & CHỐNG RÚT LP (ANTI-RUG) */}
@@ -560,150 +629,7 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
             </div>
           </div>
 
-          {/* SECTION 3: THỜI GIAN, ATH & ATL (Tuổi 3-10d, ATH 200K-300K, ATL 10K) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800/70">
-            
-            {/* Age Filter */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-purple-400" />
-                  {lang === 'vi' ? 'Tuổi Token (Age)' : 'Token Age (Days)'}
-                </span>
-                {(minAgeDays > 0 || maxAgeDays > 0) && (
-                  <button onClick={() => { setMinAgeDays(0); setMaxAgeDays(0); }} className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer">
-                    {lang === 'vi' ? 'Mặc định' : 'Clear'}
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => { setMinAgeDays(3); setMaxAgeDays(10); }}
-                  className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer w-full text-center ${
-                    minAgeDays === 3 && maxAgeDays === 10
-                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
-                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                  }`}
-                >
-                  3 - 10 ngày (Mục tiêu)
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-0.5">Min ngày</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={minAgeDays || ''}
-                    onChange={(e) => setMinAgeDays(Number(e.target.value) || 0)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-0.5">Max ngày</label>
-                  <input
-                    type="number"
-                    placeholder="Không giới hạn"
-                    value={maxAgeDays || ''}
-                    onChange={(e) => setMaxAgeDays(Number(e.target.value) || 0)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ATH Market Cap */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                  {lang === 'vi' ? 'Vốn hóa Đỉnh (ATH)' : 'ATH Market Cap'}
-                </span>
-                {(minAthMarketCap > 0 || maxAthMarketCap > 0) && (
-                  <button onClick={() => { setMinAthMarketCap(0); setMaxAthMarketCap(0); }} className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer">
-                    {lang === 'vi' ? 'Mặc định' : 'Clear'}
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => { setMinAthMarketCap(200_000); setMaxAthMarketCap(300_000); }}
-                  className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer w-full text-center ${
-                    minAthMarketCap === 200_000 && maxAthMarketCap === 300_000
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                  }`}
-                >
-                  $200K - $300K (Mục tiêu)
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5">
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-0.5">Min ATH ($)</label>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    value={minAthMarketCap || ''}
-                    onChange={(e) => setMinAthMarketCap(Number(e.target.value) || 0)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-0.5">Max ATH ($)</label>
-                  <input
-                    type="number"
-                    placeholder="Không giới hạn"
-                    value={maxAthMarketCap || ''}
-                    onChange={(e) => setMaxAthMarketCap(Number(e.target.value) || 0)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ATL Market Cap */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
-                  {lang === 'vi' ? 'Đáy Sập (ATL Floor)' : 'ATL Floor Market Cap'}
-                </span>
-                {maxAtlMarketCap > 0 && (
-                  <button onClick={() => setMaxAtlMarketCap(0)} className="text-[10px] text-slate-400 hover:text-slate-200 cursor-pointer">
-                    {lang === 'vi' ? 'Mặc định' : 'Clear'}
-                  </button>
-                )}
-              </div>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => setMaxAtlMarketCap(15_000)}
-                  className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer w-full text-center ${
-                    maxAtlMarketCap === 15_000
-                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                  }`}
-                >
-                  Đáy &le; $15K (~10K)
-                </button>
-              </div>
-              <div>
-                <label className="text-[9px] text-slate-500 block mb-0.5">Đáy ATL tối đa ($)</label>
-                <input
-                  type="number"
-                  placeholder="Ví dụ: 15000"
-                  value={maxAtlMarketCap || ''}
-                  onChange={(e) => setMaxAtlMarketCap(Number(e.target.value) || 0)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-white"
-                />
-              </div>
-            </div>
-
-          </div>
-
-          {/* SECTION 4: THỊ TRƯỜNG CHUNG (Vốn hóa, Volume 24h, Thanh khoản) */}
+          {/* SECTION 3: THỊ TRƯỜNG CHUNG (Vốn hóa, Volume 24h, Thanh khoản) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
             {/* Filter 1: Current Market Cap */}
